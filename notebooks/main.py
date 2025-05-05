@@ -1,11 +1,10 @@
 import sys
 import logging
 from pathlib import Path
-# Add project root to Python path
+
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
-# Rest of your imports
 from src.data.loader import DataLoader
 from src.data.splitter import DataSplitter
 from src.features.composite import CompositeFeatureExtractor
@@ -21,7 +20,7 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     logger = logging.getLogger('iot23_framework')
-    # Example usage
+    
     data_dir = Path("C:\\Users\murri\PycharmProjects\IoT\data\data\IoT-23-Max")
     
     # Initialize data loader
@@ -36,7 +35,6 @@ if __name__ == "__main__":
     network_features = NetworkTrafficFeatures()
     time_features = TimeBasedFeatures()
     
-    # Create composite extractor
     composite_extractor = CompositeFeatureExtractor([
         network_features,
         time_features
@@ -47,7 +45,6 @@ if __name__ == "__main__":
         sample_files = loader.file_paths[4]  # Adjust as needed
         print(f"Processing sample files: {sample_files}")
         
-        # Process with feature extraction
         processed_data = loader.process_file(
             sample_files,
             feature_extractor=composite_extractor,
@@ -58,10 +55,9 @@ if __name__ == "__main__":
         print("Feature columns:")
         print(processed_data.columns.tolist())
         
-        # Preprocess for ML
+        # Preprocess features - encodings, conversions, etc
         preprocessor = DataPreprocessor()
         
-        # Assuming 'label' is the target column - adjust for actual IoT-23 format
         target_col = 'label' if 'label' in processed_data.columns else 'label'
         
         # Check if target column exists, otherwise use a dummy

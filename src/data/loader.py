@@ -29,7 +29,7 @@ DTYPES = {
     'orig_ip_bytes': 'float32',
     'resp_pkts': 'float32',
     'resp_ip_bytes': 'float32',
-    'tunnel_parents': 'string',  # or 'object' if it's a list or set
+    'tunnel_parents': 'string', 
     'label': 'string',
 }
 
@@ -70,7 +70,6 @@ class DataLoader:
     
     def _discover_files(self) -> List[Path]:
         """Find all relevant data files in the data directory."""
-        # Adjust this pattern based on actual file extensions in IoT-23
         return list(self.data_dir.glob("*.csv"))
     
     def get_files_info(self) -> pd.DataFrame:
@@ -108,7 +107,6 @@ class DataLoader:
         """
         file_path = Path(file_path)
         
-        # IoT-23 uses csv format
         logger.info(f"Loading file in chunks: {file_path.name}")
         if columns is None:
             reader = pd.read_csv(
