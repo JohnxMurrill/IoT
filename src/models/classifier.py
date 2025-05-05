@@ -136,9 +136,6 @@ class GMMClassifier(BaseEstimator, ClassifierMixin):
         
     def predict_proba(self, X):
         """Calculate probability for each class based on GMM scores"""
-        if not self.classes_:
-            raise ValueError("Model not trained. Call fit() first.")
-            
         # Initialize probabilities array
         proba = np.zeros((X.shape[0], len(self.classes_)))
         

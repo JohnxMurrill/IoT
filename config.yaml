@@ -7,7 +7,7 @@ data:
   # Pattern to match files
   file_pattern: "*.csv"
   # Number of files to process (null for all)
-  num_files: 5
+  num_files: 15
   # Chunk size for processing large files
   chunk_size: 50000
   # Maximum rows to use in total (null for all)
