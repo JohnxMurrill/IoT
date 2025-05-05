@@ -3,6 +3,7 @@ The full dataset for this project is over 40GB, so I haven't included it in the 
 https://www.kaggle.com/datasets/indominousx86/iot-23-dataset-for-multiclass-classification?resource=download
 
 ### Layout
+'''
 IoT/
 ├── data/
 │   └── raw/
@@ -19,3 +20,4 @@ IoT/
 │       └── model.py          # Placeholder for ML model logic (training, evaluation)
 ├── requirements.txt
 └── README.md
+'''
