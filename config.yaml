@@ -1,0 +1,87 @@
+# IoT-23 Classification Pipeline Configuration
+
+# Data settings
+data:
+  # Path to data directory or specific file
+  path: "./data"
+  # Pattern to match files
+  file_pattern: "*.csv"
+  # Number of files to process (null for all)
+  num_files: 5
+  # Chunk size for processing large files
+  chunk_size: 50000
+  # Maximum rows to use in total (null for all)
+  max_rows: 500000
+  # Whether to balance classes
+  balance_classes: true
+  # Whether to cache processed data
+  cache_processed: true
+
+# Feature extraction settings
+features:
+  # List of feature extractors to use
+  extractors:
+    - network_traffic
+    - time_based
+  # Categorical columns to use (null to auto-detect)
+  categorical_columns:
+    - proto
+    - service
+    - conn_state
+    - local_orig
+    - local_resp
+    - history
+  # Numerical columns to use (null to auto-detect)
+  numerical_columns:
+    - id.orig_p
+    - id.resp_p
+    - duration
+    - orig_bytes
+    - resp_bytes
+    - missed_bytes
+    - orig_pkts
+    - orig_ip_bytes
+    - resp_pkts
+    - resp_ip_bytes
+    - total_bytes
+    - bytes_ratio
+    - total_pkts
+    - pkts_ratio
+    - bytes_per_sec
+    - pkts_per_sec
+  # Target column for classification
+  target_column: "label"
+
+# Model training settings
+training:
+  # Output directory for models and results
+  output_dir: "models"
+  # Random seed for reproducibility
+  seed: 42
+  # Whether to perform hyperparameter tuning
+  hyperparameter_tuning: true
+  # List of models to train
+  models:
+    random_forest:
+      enabled: true
+      n_estimators: 100
+      max_depth: 10
+      min_samples_split: 2
+    svm:
+      enabled: true
+      kernel: "rbf"
+      C: 1.0
+      probability: true
+    knn:
+      enabled: true
+      n_neighbors: 5
+    gaussian_nb:
+      enabled: true
+    logistic_regression:
+      enabled: true
+      max_iter: 1000
+      solver: "lbfgs"
+      multi_class: "auto"
+    gmm:
+      enabled: true
+      n_components: 5
