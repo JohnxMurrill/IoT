@@ -1,6 +1,7 @@
 import sys
 import logging
 from pathlib import Path
+import pandas as pd
 
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
@@ -108,38 +109,41 @@ def main():
             numerical_columns=numerical_columns
         )
         logger.info(f"Preprocessed X shape: {X.shape}, y shape: {y.shape}")
+        # Create a new DataFrame with transformed features and labels
+        transformed_data = pd.DataFrame(X)  
+        # Convert all column names to strings
+        transformed_data.columns = transformed_data.columns.astype(str)
+        # Add encoded labels
+        transformed_data[target_col] = y
         
-        # Split data
+        # Then split the transformed data
         if 'timestamp' in processed_data.columns:
             logger.info("Performing time-based split")
-            train_df, val_df, test_df = DataSplitter.time_based_split(
-                processed_data, 'timestamp'
+            X_train, X_val, X_test = DataSplitter.time_based_split(
+                transformed_data, 'timestamp'
             )
         else:
-            logger.info("Performing stratified split")
-            train_df, val_df, test_df = DataSplitter.stratified_split(
-                processed_data, target_col
+            logger.info("Performing stratified split") 
+            X_train, X_val, X_test = DataSplitter.stratified_split(
+                transformed_data, target_col
             )
         
-        logger.info(f"Split sizes: train={len(train_df)}, val={len(val_df)}, test={len(test_df)}")
+        logger.info(f"Split sizes: train={len(X_train)}, val={len(X_val)}, test={len(X_test)}")
         
         # Prepare data for model training
-        X_train, y_train = preprocessor.transform(train_df, target_col)
-        X_val, y_val = preprocessor.transform(val_df, target_col)
-        X_test, y_test = preprocessor.transform(test_df, target_col)
-        
-        logger.info(f"Training data shapes - X: {X_train.shape}, y: {y_train.shape}")
-        logger.info(f"Validation data shapes - X: {X_val.shape}, y: {y_val.shape}")
-        logger.info(f"Test data shapes - X: {X_test.shape}, y: {y_test.shape}")
+        # For the training data, we've already fitted the preprocessor, so we can just transform
+        logger.info(f"Training data shapes - X: {X_train.shape}, y: {X_train[target_col].shape}")
+        logger.info(f"Validation data shapes - X: {X_val.shape}, y: {X_val[target_col].shape}")
+        logger.info(f"Test data shapes - X: {X_test.shape}, y: {X_test[target_col].shape}")
         
         # Create model instances
         models = {
             'random_forest': RandomForestModel(n_estimators=100, max_depth=10),
             'svm': SVMModel(kernel='rbf', C=1.0),
-            'knn': KNNModel(n_neighbors=5),
+            'knn': KNNModel(n_neighbors=2),
             'gaussian_nb': GaussianNBModel(),
             'logistic_regression': LogisticRegressionModel(),
-            'gmm': GMMClassifier(n_components=5)
+            'gmm': GMMClassifier(n_components=2)
         }
         
         # Initialize model trainer
@@ -147,7 +151,7 @@ def main():
         
         # Train all models
         logger.info("Training models...")
-        trainer.train_all(X_train, y_train)
+        trainer.train_all(X_train, X_train[target_col])
         
         # Optional: Hyperparameter tuning example for Random Forest
         rf_param_grid = {
@@ -155,11 +159,11 @@ def main():
             'max_depth': [None, 10, 20, 30],
             'min_samples_split': [2, 5, 10]
         }
-        trainer.tune_hyperparameters('random_forest', rf_param_grid, X_train, y_train)
+        trainer.tune_hyperparameters('random_forest', rf_param_grid, X_train, X_test)
         
         # Evaluate all models
         logger.info("Evaluating models...")
-        evaluation_results = trainer.evaluate_all(X_test, y_test)
+        evaluation_results = trainer.evaluate_all(X_test, X_test)
         
         # Print summary of results
         summary = trainer.summarize_results()

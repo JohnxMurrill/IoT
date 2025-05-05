@@ -45,8 +45,6 @@ class DataPreprocessor:
             # Remove target if it's in categorical columns
             if target_column in categorical_columns:
                 categorical_columns.remove(target_column)
-        print(f"Categorical columns: {categorical_columns}")
-        print(f"Numerical columns: {numerical_columns}")
         
         if numerical_columns is None:
             numerical_columns = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -83,6 +81,12 @@ class DataPreprocessor:
             X = categorical_features
         else:
             raise ValueError("No features to process")
+        from sklearn.preprocessing import LabelEncoder
+
+        label_encoder = LabelEncoder()
+
+        # Fit on all possible target labels (e.g., from entire dataset or training set)
+        y = label_encoder.fit_transform(y)
         
         return X, y
         
