@@ -1,12 +1,21 @@
-project/
-│
-├── data/               # raw and processed data
-├── notebooks/          # exploratory analysis
+### Data
+The full dataset for this project is over 40GB, so I haven't included it in the repo. It can be found at the link below for download from kaggle.com if you're interested. Remember to update main.py with the appropriate data folder.
+https://www.kaggle.com/datasets/indominousx86/iot-23-dataset-for-multiclass-classification?resource=download
+
+### Layout
+IoT/
+├── data/
+│   └── raw/
+│       └── *.csv             # Raw IoT-23 dataset chunks
+├── notebooks/
+│   └── main.py               # Entry point for development/testing
 ├── src/
-│   ├── data_loader.py  # memory-aware CSV parsing
-│   ├── preprocess.py   # feature engineering
-│   ├── model.py        # training & evaluation
-│   └── predict.py      # batch or live predictions
-├── models/             # serialized models
-├── results/            # saved evaluation metrics
-└── run_pipeline.py     # entry point script
+│   ├── preprocessing/
+│   │   └── preprocessing.py  # Preprocessor class with fit_transform, etc.
+│   ├── data/
+│   │   └── loader.py         # Chunked loader for large CSVs
+|   |   └── splitter.py       # 
+│   └── model/
+│       └── model.py          # Placeholder for ML model logic (training, evaluation)
+├── requirements.txt
+└── README.md
