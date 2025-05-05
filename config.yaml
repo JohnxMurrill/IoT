@@ -68,7 +68,7 @@ training:
       max_depth: 10
       min_samples_split: 2
     svm:
-      enabled: true
+      enabled: false
       kernel: "rbf"
       C: 1.0
       probability: true
