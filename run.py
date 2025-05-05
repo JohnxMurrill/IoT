@@ -11,6 +11,7 @@ import time
 import argparse
 import yaml
 import numpy as np
+import pandas as pd
 
 # Add project root to path
 script_dir = Path(__file__).resolve().parent
@@ -98,6 +99,95 @@ def find_data_files(data_path=None, pattern="*.csv"):
                     return files
                     
     return files
+
+def analyze_and_fix_labels(df, target_col='label'):
+    """
+    Analyze label distribution and fix any inconsistencies.
+    
+    Args:
+        df: DataFrame to analyze
+        target_col: Target column name
+    
+    Returns:
+        DataFrame with fixed labels
+    """
+    if target_col not in df.columns:
+        logger.warning(f"Target column '{target_col}' not found in DataFrame")
+        return df
+    
+    logger.info("Analyzing label distribution...")
+    
+    # Make a copy to avoid modifying the original
+    df_fixed = df.copy()
+    
+    # Get original label distribution
+    orig_dist = df_fixed[target_col].value_counts()
+    logger.info(f"Original label distribution:\n{orig_dist}")
+    
+    # Check for case inconsistencies
+    if pd.api.types.is_object_dtype(df_fixed[target_col]):
+        # Get lowercase version
+        df_fixed[target_col + '_lower'] = df_fixed[target_col].str.lower()
+        
+        # Compare original vs lowercase distributions
+        lower_dist = df_fixed[target_col + '_lower'].value_counts()
+        
+        if len(orig_dist) != len(lower_dist):
+            logger.warning(f"Found case inconsistencies in labels!")
+            logger.info(f"After lowercase conversion, unique label count reduced from {len(orig_dist)} to {len(lower_dist)}")
+            
+            # Create a mapping of lowercase -> original case variations
+            case_variations = {}
+            for label in orig_dist.index:
+                if isinstance(label, str):
+                    lower = label.lower()
+                    if lower not in case_variations:
+                        case_variations[lower] = [label]
+                    else:
+                        case_variations[lower].append(label)
+            
+            # Log variations found
+            variations_found = {k: v for k, v in case_variations.items() if len(v) > 1}
+            if variations_found:
+                logger.info(f"Case variations found: {variations_found}")
+            
+            # Normalize labels to lowercase
+            df_fixed[target_col] = df_fixed[target_col + '_lower']
+        
+        # Drop the temporary column
+        df_fixed = df_fixed.drop(columns=[target_col + '_lower'])
+        
+        # Apply standard label mapping (e.g., "normal" -> "benign")
+        label_mapping = {
+            'malicious': 'malicious',
+            'benign': 'benign', 
+            'normal': 'benign',
+            'anomaly': 'malicious',
+            'attack': 'malicious'
+        }
+        
+        # Apply the mapping
+        df_fixed[target_col] = df_fixed[target_col].map(
+            lambda x: label_mapping.get(x, x) if isinstance(x, str) and x in label_mapping else x
+        )
+        
+        # Log final distribution
+        final_dist = df_fixed[target_col].value_counts()
+        logger.info(f"Final label distribution after normalization:\n{final_dist}")
+        
+        # Check for highly imbalanced classes
+        if len(final_dist) > 1:
+            imbalance_ratio = final_dist.max() / final_dist.min()
+            logger.info(f"Class imbalance ratio (majority:minority): {imbalance_ratio:.2f}")
+            
+            if imbalance_ratio > 10:
+                logger.warning("Severe class imbalance detected. Consider using balance_classes=True")
+    
+    return df_fixed
+
+# Usage in run.py:
+# After loading the data:
+# processed_data = analyze_and_fix_labels(processed_data, target_col)
 
 def train_iot23_models(config=None):
     """
@@ -188,6 +278,7 @@ def train_iot23_models(config=None):
         max_rows_total=max_rows,
         balance_classes=balance_classes
     )
+    processed_data = analyze_and_fix_labels(processed_data, target_col)
     
     if processed_data.empty:
         logger.error("No data was processed successfully.")

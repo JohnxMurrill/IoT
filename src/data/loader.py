@@ -118,8 +118,8 @@ class DataLoader:
                     header=0,
                     chunksize=self.chunk_size,
                     low_memory=False,
-                    on_bad_lines='warn'
-                    # dtype={col: DTYPES.get(col, 'object') for col in DTYPES.keys()}
+                    on_bad_lines='warn',
+                    dtype={col: DTYPES.get(col, 'object') for col in DTYPES.keys()}
                 )
             else:
                 reader = pd.read_csv(
@@ -128,30 +128,63 @@ class DataLoader:
                     names=columns,
                     chunksize=self.chunk_size,
                     low_memory=False,
-                    on_bad_lines='warn'
-                    # dtype={col: DTYPES.get(col, 'object') for col in columns}
+                    on_bad_lines='warn',
+                    dtype={col: DTYPES.get(col, 'object') for col in columns if col in DTYPES}
                 )
                 
             for chunk in reader:
                 if columns is None:
                     chunk.columns = [col.strip() for col in chunk.columns]
                 
-                # Add label from filename if not present
+                # Add or normalize label column
                 if 'label' not in chunk.columns:
+                    # Extract label from filename
                     filename = file_path.name.lower()
                     if 'benign' in filename:
-                        chunk['label'] = 'benign'
+                        chunk['label'] = 'benign'  # Always lowercase
                     elif 'malicious' in filename:
-                        chunk['label'] = 'malicious'
+                        chunk['label'] = 'malicious'  # Always lowercase
                     else:
                         # Try to extract more specific labels
                         if any(attack in filename for attack in ['botnet', 'c&c', 'ddos', 'scan']):
                             for attack in ['botnet', 'c&c', 'ddos', 'scan']:
                                 if attack in filename:
-                                    chunk['label'] = attack
+                                    chunk['label'] = attack  # Always lowercase
                                     break
                         else:
                             chunk['label'] = 'unknown'
+                else:
+                    # Normalize existing label values (convert to lowercase)
+                    if pd.api.types.is_object_dtype(chunk['label']):
+                        # Check original values for debugging
+                        unique_before = chunk['label'].unique()
+                        
+                        # Convert all labels to lowercase for consistency
+                        chunk['label'] = chunk['label'].str.lower()
+                        
+                        # Check values after lowercase conversion
+                        unique_after = chunk['label'].unique()
+                        
+                        # Log if case normalization made a difference
+                        if len(unique_before) != len(unique_after):
+                            logger.info(f"Label case normalization reduced unique values from {len(unique_before)} to {len(unique_after)}")
+                            logger.info(f"Before: {unique_before}")
+                            logger.info(f"After: {unique_after}")
+                        
+                        # Map specific variations to standard forms
+                        label_mapping = {
+                            'malicious': 'malicious',
+                            'benign': 'benign', 
+                            'normal': 'benign',
+                            'anomaly': 'malicious',
+                            'attack': 'malicious'
+                        }
+                        
+                        # Apply mapping to standardize labels
+                        chunk['label'] = chunk['label'].map(lambda x: label_mapping.get(x.lower(), x.lower()) if isinstance(x, str) else 'unknown')
+                
+                # Log data info for debugging
+                logger.debug(f"Chunk from {file_path.name}: {len(chunk)} rows, {len(chunk.columns)} columns")
                 
                 yield chunk
                 
@@ -283,6 +316,24 @@ class DataLoader:
             logger.warning("No data was processed from any files")
             return pd.DataFrame()
         
+        # Before combining, ensure consistent label capitalization
+        for i, df in enumerate(results):
+            if 'label' in df.columns and pd.api.types.is_object_dtype(df['label']):
+                # Convert all labels to lowercase
+                results[i]['label'] = df['label'].str.lower()
+                
+                # Map variations to standard forms
+                label_mapping = {
+                    'malicious': 'malicious',
+                    'benign': 'benign', 
+                    'normal': 'benign',
+                    'anomaly': 'malicious',
+                    'attack': 'malicious'
+                }
+                
+                # Apply mapping
+                results[i]['label'] = results[i]['label'].map(lambda x: label_mapping.get(x, x) if isinstance(x, str) else 'unknown')
+        
         # Combine results
         logger.info("Combining results from all files")
         
@@ -302,6 +353,9 @@ class DataLoader:
                 else:
                     label_counts[label] = count
                     
+            # Log original class distribution
+            logger.info(f"Original class distribution: {label_counts}")
+            
             # Find the minority class count
             if label_counts:
                 min_count = min(label_counts.values())
@@ -311,7 +365,6 @@ class DataLoader:
                     min_count = min(min_count, samples_per_class)
                     
                 logger.info(f"Balancing classes. Minimum class count: {min_count}")
-                logger.info(f"Class distribution before balancing: {label_counts}")
                 
                 # Sample each class equally
                 for df in results:
@@ -348,12 +401,42 @@ class DataLoader:
         # Apply max_rows_total if specified
         if max_rows_total and len(combined) > max_rows_total:
             logger.info(f"Sampling dataset to {max_rows_total} rows (from {len(combined)} rows)")
-            combined = combined.sample(max_rows_total, random_state=42)
-        # Apply sample_fraction if specified
-        elif sample_fraction is not None and 0 < sample_fraction < 1:
+            # Try to maintain class proportions when sampling
+            if 'label' in combined.columns:
+                combined = combined.groupby('label', group_keys=False).apply(
+                    lambda x: x.sample(
+                        n=max(1, int(max_rows_total * len(x) / len(combined))),
+                        random_state=42
+                    )
+                )
+                # If we still have too many rows (due to rounding), take a final sample
+                if len(combined) > max_rows_total:
+                    combined = combined.sample(max_rows_total, random_state=42)
+            else:
+                combined = combined.sample(max_rows_total, random_state=42)
+        
+        # Apply sample_fraction if specified and max_rows_total not used
+        elif sample_fraction is not None and 0 < sample_fraction < 1 and (max_rows_total is None):
             sample_size = int(len(combined) * sample_fraction)
             logger.info(f"Sampling {sample_fraction*100}% of data ({sample_size} rows from {len(combined)})")
-            combined = combined.sample(sample_size, random_state=42)
+            # Try to maintain class proportions when sampling
+            if 'label' in combined.columns:
+                combined = combined.groupby('label', group_keys=False).apply(
+                    lambda x: x.sample(
+                        n=max(1, int(sample_size * len(x) / len(combined))),
+                        random_state=42
+                    )
+                )
+                # If we still have too many rows (due to rounding), take a final sample
+                if len(combined) > sample_size:
+                    combined = combined.sample(sample_size, random_state=42)
+            else:
+                combined = combined.sample(sample_size, random_state=42)
+                
+        # Final logging of class distribution (if applicable)
+        if 'label' in combined.columns:
+            final_dist = combined['label'].value_counts().to_dict()
+            logger.info(f"Final class distribution: {final_dist}")
             
         logger.info(f"Final dataset shape: {combined.shape}")
         

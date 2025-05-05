@@ -3,7 +3,7 @@
 # Data settings
 data:
   # Path to data directory or specific file
-  path: "./data"
+  path: "C:\\Users\\murri\\PycharmProjects\\IoT\\data\\data\\IoT-23-Max"
   # Pattern to match files
   file_pattern: "*.csv"
   # Number of files to process (null for all)

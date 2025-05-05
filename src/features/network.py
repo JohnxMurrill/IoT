@@ -18,6 +18,12 @@ class NetworkTrafficFeatures(FeatureExtractor):
         
         # Basic features - adjust column names based on actual IoT-23 format
         try:
+            # Convert string columns to numeric if needed
+            numeric_columns = ['orig_bytes', 'resp_bytes', 'orig_pkts', 'resp_pkts', 'duration']
+            for col in numeric_columns:
+                if col in features.columns and pd.api.types.is_string_dtype(features[col]):
+                    features[col] = pd.to_numeric(features[col], errors='coerce')
+                    
             # Extract packet size features
             if 'orig_bytes' in features.columns and 'resp_bytes' in features.columns:
                 features['total_bytes'] = features['orig_bytes'] + features['resp_bytes']
