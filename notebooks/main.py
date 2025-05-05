@@ -44,14 +44,14 @@ if __name__ == "__main__":
     
     # Process a sample file
     if len(loader.file_paths) > 0:
-        sample_files = loader.file_paths[0:4]  # Adjust as needed
+        sample_files = loader.file_paths[4]  # Adjust as needed
         print(f"Processing sample files: {sample_files}")
         
         # Process with feature extraction
-        processed_data = loader.process_files_parallel(
+        processed_data = loader.process_file(
             sample_files,
             feature_extractor=composite_extractor,
-            sample_fraction=0.1  # Use 10% of each file
+            cache_key=f"{sample_files.stem}_features"
         )
         
         print(f"Processed data shape: {processed_data.shape}")
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         if target_col not in processed_data.columns:
             print(f"Warning: Target column '{target_col}' not found. Creating dummy for example.")
             processed_data[target_col] = 'normal'  # Dummy label
-        
+
         # Fit and transform
         categorical_columns = [
             'proto',

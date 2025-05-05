@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import logging
 from pathlib import Path
 from joblib import Parallel, delayed
@@ -14,12 +15,12 @@ DTYPES = {
     'id.orig_p': 'int32',
     'id.resp_h': 'string',
     'id.resp_p': 'int32',
-    'proto': 'category',
-    'service': 'category',
-    'duration': 'float32',
+    'proto': 'string',
+    'service': 'string',
+    'duration': 'string',
     'orig_bytes': 'float32',
     'resp_bytes': 'float32',
-    'conn_state': 'category',
+    'conn_state': 'string',
     'local_orig': 'boolean',
     'local_resp': 'boolean',
     'missed_bytes': 'float32',
@@ -29,7 +30,7 @@ DTYPES = {
     'resp_pkts': 'float32',
     'resp_ip_bytes': 'float32',
     'tunnel_parents': 'string',  # or 'object' if it's a list or set
-    'label': 'category',
+    'label': 'string',
 }
 
 class DataLoader:
@@ -107,7 +108,7 @@ class DataLoader:
         """
         file_path = Path(file_path)
         
-        # IoT-23 uses tab-separated values format
+        # IoT-23 uses csv format
         logger.info(f"Loading file in chunks: {file_path.name}")
         if columns is None:
             reader = pd.read_csv(
@@ -115,7 +116,7 @@ class DataLoader:
                 header=0,
                 chunksize=self.chunk_size,
                 low_memory=False,
-                dtype={col: DTYPES.get(col, 'object') for col in DTYPES.keys()}
+                # dtype={col: DTYPES.get(col, 'object') for col in DTYPES.keys()}
             )
         else:
             reader = pd.read_csv(
@@ -124,11 +125,9 @@ class DataLoader:
                 names=columns,
                 chunksize=self.chunk_size,
                 low_memory=False,
-                dtype={col: DTYPES.get(col, 'object') for col in columns}
+                # dtype={col: DTYPES.get(col, 'object') for col in columns}
             )
         for chunk in reader:
-            # Basic cleaning
-            # chunk['ts'] = pd.to_datetime(chunk['ts'], errors='coerce')
             if columns is None:
                 chunk.columns = [col.strip() for col in chunk.columns]
             
@@ -177,7 +176,7 @@ class DataLoader:
         
         # Combine processed chunks
         result = pd.concat(processed_chunks, ignore_index=True)
-        
+
         # Cache result
         if self.cache_processed:
             logger.info(f"Caching processed data: {cache_path}")

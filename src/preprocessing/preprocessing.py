@@ -34,7 +34,9 @@ class DataPreprocessor:
         """
         if target_column not in df.columns:
             raise ValueError(f"Target column '{target_column}' not found in DataFrame")
-        
+        if "duration" in df.columns:
+            df['duration'] = pd.to_timedelta(df['duration']).dt.total_seconds() * 1000
+
         self.target_column = target_column
         
         # If columns not specified, infer them
@@ -62,7 +64,6 @@ class DataPreprocessor:
         numerical_features = None
         if numerical_columns:
             scaler = StandardScaler()
-            print(df.columns)
             numerical_features = scaler.fit_transform(df[numerical_columns].fillna(0))
             self.scalers['standard'] = scaler
         
@@ -84,7 +85,7 @@ class DataPreprocessor:
             raise ValueError("No features to process")
         
         return X, y
-    
+        
     def transform(self, df: pd.DataFrame) -> np.ndarray:
         """
         Transform new data using fitted preprocessors.
