@@ -164,12 +164,22 @@ class DataPreprocessor:
                 self.numerical_stats[col] = {'median': fill_value}
                 logger.info(f"Filled NA values in '{col}' with median: {fill_value}")
                 
+        # Fill missing values for remaining columns
         for col in categorical_columns:
             if col in df_processed.columns and df_processed[col].isna().any():
-                most_common = df_processed[col].mode()[0] if not df_processed[col].isna().all() else "unknown"
-                df_processed[col] = df_processed[col].fillna(most_common)
-                self.categorical_mappings[col] = {'missing_value': most_common}
-                logger.info(f"Filled NA values in '{col}' with mode: {most_common}")
+                # Special handling for boolean columns
+                if pd.api.types.is_bool_dtype(df_processed[col]):
+                    # Use the most common boolean value or False as default
+                    most_common = df_processed[col].mode()[0] if not df_processed[col].isna().all() else False
+                    df_processed[col] = df_processed[col].fillna(most_common)
+                    self.categorical_mappings[col] = {'missing_value': most_common}
+                    logger.info(f"Filled NA values in boolean column '{col}' with: {most_common}")
+                else:
+                    # For non-boolean categorical columns, use mode or 'unknown'
+                    most_common = df_processed[col].mode()[0] if not df_processed[col].isna().all() else "unknown"
+                    df_processed[col] = df_processed[col].fillna(most_common)
+                    self.categorical_mappings[col] = {'missing_value': most_common}
+                    logger.info(f"Filled NA values in '{col}' with mode: {most_common}")
                 
         # Fill any remaining NAs in target column
         if df_processed[target_column].isna().any():

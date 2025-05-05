@@ -424,9 +424,16 @@ def train_iot23_models(config=None):
             if 'enabled' in model_config:
                 del model_config['enabled']
                 
-            # Add random seed for reproducibility
             if 'random_state' not in model_config:
-                model_config['random_state'] = seed
+                # List of models that support random_state
+                models_with_random_state = ['random_forest', 'logistic_regression', 'svm']
+                
+                # Only add random_state to models that support it
+                if model_name in models_with_random_state:
+                    model_config['random_state'] = seed
+                    logger.debug(f"Added random_state={seed} to {model_name}")
+                else:
+                    logger.debug(f"Model {model_name} does not support random_state, skipping")
                 
             # Create the model
             if model_name == 'random_forest':

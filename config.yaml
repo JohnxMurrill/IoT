@@ -59,7 +59,7 @@ training:
   # Random seed for reproducibility
   seed: 42
   # Whether to perform hyperparameter tuning
-  hyperparameter_tuning: true
+  hyperparameter_tuning: false
   # List of models to train
   models:
     random_forest:

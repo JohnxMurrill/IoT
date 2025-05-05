@@ -72,7 +72,6 @@ class SVMModel(BaseClassifier):
         self.model = SVC(
             kernel=kernel,
             C=C,
-            probability=True,
             **kwargs
         )
 
